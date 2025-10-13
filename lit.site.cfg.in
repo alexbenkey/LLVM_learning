@@ -1,0 +1,15 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+# Tool substitutions to enable
+config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
+config.llvm_build_dir = "@LLVM_BINARY_DIR@"
+config.target_triple = "@TARGET_TRIPLE@"
+config.python_executable = "@PYTHON_EXECUTABLE@"
+
+# Support substitution of the tools and build directories
+config.substitutions.append(('%llvm_tools_dir', config.llvm_tools_dir))
+config.substitutions.append(('%llvm_build_dir', config.llvm_build_dir))
+config.substitutions.append(('%target_triple', config.target_triple))
+
+# Let the main config do the real work.
+lit_config.load_config(config, "@LLVM_LIT_EXPLORATION_TEST_SOURCE_DIR@/lit.cfg.py")

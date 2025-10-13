@@ -1,0 +1,18 @@
+; RUN: echo "Function: foo" > %t
+; RUN: echo "Variables: x, y, z" >> %t
+; RUN: echo "Return type: i32" >> %t
+; RUN: echo "Line count: 42" >> %t
+; RUN: FileCheck %s < %t
+
+; Test various FileCheck patterns and capabilities
+
+; CHECK: Function: {{[a-zA-Z_][a-zA-Z0-9_]*}}
+; CHECK: Variables: {{.*}}
+; CHECK: Return type: [[TYPE:i[0-9]+]]
+; CHECK: Line count: [[COUNT:[0-9]+]]
+
+; This test demonstrates:
+; - Simple string matching
+; - Regular expression patterns {{...}}
+; - Variable capture and reuse [[VAR:pattern]] and [[VAR]]
+; - Flexible matching with {{.*}}
