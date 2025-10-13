@@ -32,6 +32,8 @@ while [[ $# -gt 0 ]]; do
             echo "  -j, --json        Output results in JSON format"
             echo "  -h, --help        Show this help message"
             echo ""
+            echo "Note: This script automatically detects and prefers 'llvm-lit' over 'lit'"
+            echo ""
             echo "Examples:"
             echo "  $0                          # Run all tests"
             echo "  $0 -v                       # Run all tests with verbose output"
@@ -53,13 +55,27 @@ echo ""
 # Create output directory if it doesn't exist
 mkdir -p Output
 
+# Determine which lit to use (prefer llvm-lit)
+LIT_CMD=""
+if command -v llvm-lit >/dev/null 2>&1; then
+    LIT_CMD="llvm-lit"
+    echo "Using: llvm-lit (LLVM distribution version)"
+elif command -v lit >/dev/null 2>&1; then
+    LIT_CMD="lit"
+    echo "Using: lit (PyPI version)"
+else
+    echo "❌ Error: Neither 'llvm-lit' nor 'lit' found in PATH"
+    echo "Please install LLVM development tools or 'pip install lit'"
+    exit 1
+fi
+
 # Run the tests
 if [ -n "$OUTPUT_FORMAT" ]; then
     echo "Running with JSON output..."
-    lit $VERBOSE $OUTPUT_FORMAT "$TEST_PATH"
+    $LIT_CMD $VERBOSE $OUTPUT_FORMAT "$TEST_PATH"
 else
     echo "Running tests..."
-    lit $VERBOSE "$TEST_PATH"
+    $LIT_CMD $VERBOSE "$TEST_PATH"
 fi
 
 echo ""

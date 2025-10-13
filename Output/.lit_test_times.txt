@@ -1,0 +1,4 @@
+3.536129e-02 tests/basic/hello.ll
+-3.221703e-02 tests/advanced/opt-pipeline.ll
+2.746820e-03 tests/debug.test
+5.368710e-03 tests/filecheck/patterns.test
