@@ -18,8 +18,8 @@ entry:
 ; CHECK-NOT: alloca
 ; CHECK-NOT: store
 ; CHECK-NOT: load
-; CHECK: add i32 %x, %y
+; CHECK: add i32 %{{[xy]}}, %{{[xy]}}
 
-; O2: @test_function
+; O2-LABEL: @test_function
 ; With O2 optimization, function should be optimized further
-; O2: add i32 %x, %y
+; O2: add i32 %{{[xy]}}, %{{[xy]}}

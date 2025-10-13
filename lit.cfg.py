@@ -33,8 +33,10 @@ tools = {
 for name, path in tools.items():
     config.substitutions.append(('%' + name, path))
 
-# Add other necessary substitutions
-config.substitutions.append(('%t', os.path.join(config.test_exec_root, 'temp')))
+# Add other necessary substitutions  
+# %t should create unique temporary files for each test
+# We'll let lit handle this automatically by not defining %t
+# lit will create unique temp files when %t is used
 config.substitutions.append(('%T', config.test_exec_root))
 
 # Create output directory

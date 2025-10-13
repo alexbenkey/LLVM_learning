@@ -1,0 +1,4 @@
+Function: foo
+Variables: x, y, z
+Return type: i32
+Line count: 42
