@@ -1,0 +1,208 @@
+version: 2.1
+
+# Define reusable commands
+commands:
+  install-llvm:
+    description: "Install LLVM tools and dependencies"
+    parameters:
+      llvm-version:
+        type: string
+        default: "20"
+    steps:
+      - run:
+          name: Install LLVM << parameters.llvm-version >> and dependencies
+          command: |
+            # Update package lists
+            sudo apt-get update
+            
+            # Install LLVM tools
+            sudo apt-get install -y \
+              llvm-<< parameters.llvm-version >> \
+              clang-<< parameters.llvm-version >> \
+              python3-pip
+            
+            # Install lit via pip
+            pip3 install lit
+            
+            # Verify installations
+            echo "=== Verifying LLVM Installation ==="
+            llvm-as --version
+            clang --version
+            FileCheck --version || echo "FileCheck ready"
+            lit --version
+
+  run-tests:
+    description: "Run lit tests with proper reporting"
+    parameters:
+      output-dir:
+        type: string
+        default: "test-results"
+    steps:
+      - run:
+          name: Create output directory
+          command: mkdir -p << parameters.output-dir >>
+      
+      - run:
+          name: Run LLVM lit tests
+          command: |
+            # Run tests with XML output for CircleCI
+            lit --xunit-xml-output=<< parameters.output-dir >>/results.xml tests/
+          
+          # Continue even if some tests fail - we want to see the results
+          when: always
+      
+      - store_test_results:
+          path: << parameters.output-dir >>
+      
+      - store_artifacts:
+          path: << parameters.output-dir >>
+          destination: test-results
+
+# Define the jobs
+jobs:
+  # Basic test job
+  test-basic:
+    docker:
+      - image: cimg/base:stable
+    
+    steps:
+      - checkout
+      - install-llvm
+      - run-tests
+  
+  # Test with different LLVM versions
+  test-llvm-versions:
+    docker:
+      - image: cimg/base:stable
+    
+    parameters:
+      llvm-version:
+        type: string
+    
+    steps:
+      - checkout
+      - install-llvm:
+          llvm-version: << parameters.llvm-version >>
+      - run-tests:
+          output-dir: "test-results-llvm-<< parameters.llvm-version >>"
+
+  # Comprehensive test with code coverage and performance metrics
+  test-comprehensive:
+    docker:
+      - image: cimg/base:stable
+    
+    resource_class: medium+  # Use more resources for comprehensive testing
+    
+    steps:
+      - checkout
+      - install-llvm
+      
+      # Run tests with timing information
+      - run:
+          name: Run tests with performance metrics
+          command: |
+            mkdir -p test-results
+            mkdir -p performance-results
+            
+            # Run with timing information
+            lit --time-tests --xunit-xml-output=test-results/results.xml tests/ | tee performance-results/timing.log
+            
+            # Extract slowest tests for analysis
+            grep -A 20 "Slowest Tests:" performance-results/timing.log > performance-results/slow-tests.txt || true
+      
+      - store_test_results:
+          path: test-results
+      
+      - store_artifacts:
+          path: test-results
+          destination: test-results
+      
+      - store_artifacts:
+          path: performance-results
+          destination: performance-metrics
+      
+      # Run exercises separately to track learning progress
+      - run:
+          name: Check exercise completion status
+          command: |
+            mkdir -p exercise-results
+            echo "=== Exercise Completion Status ===" > exercise-results/status.txt
+            
+            # Count completed vs incomplete exercises
+            if [ -d "exercises/" ]; then
+              total_exercises=$(find exercises/ -name "*.ll" -not -name "*SOLUTION*" | wc -l)
+              
+              # Run exercises and capture results
+              lit exercises/ > exercise-results/raw-output.txt 2>&1 || true
+              
+              passed=$(grep "Passed:" exercise-results/raw-output.txt | grep -o '[0-9]*' | head -1 || echo "0")
+              failed=$(grep "Failed:" exercise-results/raw-output.txt | grep -o '[0-9]*' | head -1 || echo "0")
+              
+              echo "Total Exercises: $total_exercises" >> exercise-results/status.txt
+              echo "Completed (Passing): $passed" >> exercise-results/status.txt
+              echo "Incomplete (Failing): $failed" >> exercise-results/status.txt
+              echo "" >> exercise-results/status.txt
+              echo "Progress: $passed/$total_exercises exercises completed" >> exercise-results/status.txt
+              
+              # Show which exercises are incomplete
+              echo "" >> exercise-results/status.txt
+              echo "=== Incomplete Exercises ===" >> exercise-results/status.txt
+              grep "FAIL:" exercise-results/raw-output.txt >> exercise-results/status.txt || echo "All exercises completed!" >> exercise-results/status.txt
+              
+              cat exercise-results/status.txt
+            else
+              echo "No exercises directory found" >> exercise-results/status.txt
+            fi
+      
+      - store_artifacts:
+          path: exercise-results
+          destination: exercise-status
+
+# Define workflows
+workflows:
+  version: 2
+  
+  # Main workflow - runs on every commit
+  test-and-build:
+    jobs:
+      - test-basic
+      
+      # Run comprehensive tests only on main branch
+      - test-comprehensive:
+          filters:
+            branches:
+              only:
+                - main
+                - master
+      
+      # Test with different LLVM versions in parallel
+      - test-llvm-versions:
+          name: test-llvm-<< matrix.llvm-version >>
+          matrix:
+            parameters:
+              llvm-version: ["16", "18", "20"]
+          # Only run version matrix on main branch to save resources
+          filters:
+            branches:
+              only:
+                - main
+                - master
+  
+  # Nightly workflow - runs daily for long-term monitoring
+  nightly:
+    triggers:
+      - schedule:
+          cron: "0 2 * * *"  # Run at 2 AM UTC daily
+          filters:
+            branches:
+              only:
+                - main
+                - master
+    
+    jobs:
+      - test-comprehensive
+      - test-llvm-versions:
+          name: nightly-llvm-<< matrix.llvm-version >>
+          matrix:
+            parameters:
+              llvm-version: ["16", "17", "18", "19", "20"]
