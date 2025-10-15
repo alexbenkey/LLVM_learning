@@ -12,14 +12,37 @@ commands:
       - run:
           name: Install LLVM << parameters.llvm-version >> and dependencies
           command: |
-            # Update package lists
+            # Install prerequisites for adding APT repositories
+            sudo apt-get update
+            sudo apt-get install -y wget software-properties-common gnupg
+            
+            # Add LLVM APT repository
+            wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+            
+            # Determine Ubuntu codename
+            CODENAME=$(lsb_release -sc)
+            echo "Detected Ubuntu codename: $CODENAME"
+            
+            # Add the appropriate LLVM repository
+            echo "deb http://apt.llvm.org/$CODENAME/ llvm-toolchain-$CODENAME-<< parameters.llvm-version >> main" | sudo tee /etc/apt/sources.list.d/llvm.list
+            
+            # Update package lists with new repository
             sudo apt-get update
             
             # Install LLVM tools
             sudo apt-get install -y \
               llvm-<< parameters.llvm-version >> \
               clang-<< parameters.llvm-version >> \
+              llvm-<< parameters.llvm-version >>-dev \
+              llvm-<< parameters.llvm-version >>-tools \
               python3-pip
+            
+            # Create symlinks for version-less commands
+            sudo update-alternatives --install /usr/bin/llvm-as llvm-as /usr/bin/llvm-as-<< parameters.llvm-version >> 100
+            sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-<< parameters.llvm-version >> 100
+            sudo update-alternatives --install /usr/bin/FileCheck FileCheck /usr/bin/FileCheck-<< parameters.llvm-version >> 100
+            sudo update-alternatives --install /usr/bin/opt opt /usr/bin/opt-<< parameters.llvm-version >> 100
+            sudo update-alternatives --install /usr/bin/lli lli /usr/bin/lli-<< parameters.llvm-version >> 100
             
             # Install lit via pip
             pip3 install lit
@@ -28,7 +51,7 @@ commands:
             echo "=== Verifying LLVM Installation ==="
             llvm-as --version
             clang --version
-            FileCheck --version || echo "FileCheck ready"
+            FileCheck --version
             lit --version
 
   run-tests:
