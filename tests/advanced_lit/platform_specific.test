@@ -1,0 +1,17 @@
+// REQUIRES: system-linux
+// RUN: echo "Running on Linux system" | %FileCheck %s
+// RUN: uname -s | %FileCheck %s --check-prefix=UNAME
+
+// EXAMPLE: Platform-Specific Testing
+// This test only runs on Linux systems due to the REQUIRES directive
+
+// CHECK: Running on Linux system
+// UNAME: Linux
+
+// You could also use:
+// REQUIRES: x86_64
+// UNSUPPORTED: windows
+// XFAIL: system-darwin
+
+// For conditional testing based on available features:
+// REQUIRES: system-linux, x86_64

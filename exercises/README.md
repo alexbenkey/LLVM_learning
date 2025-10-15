@@ -1,6 +1,14 @@
 # LLVM IR Learning Exercises
 
-This directory contains progressive exercises designed to teach you LLVM IR fundamentals through hands-on practice. Each exercise is a partially complete LLVM IR program with TODO sections for you to fill in. The exercises integrate with your lit testing framework, so tests will pass when you complete them correctly.
+This directory contains challenging exercises designed to teach you LLVM IR and modern C++ implementation through problem-solving and research. Unlike typical tutorials, these exercises require you to figure out solutions yourself - no hints are provided! You'll need to research documentation, experiment, and think critically about the problems.
+
+## Two Complementary Track
+
+### 🔧 **LLVM IR Track** (6 exercises)
+Learn LLVM IR directly by implementing algorithms and solving puzzles at the instruction level.
+
+### 🔮 **C++ Analysis Track** (6 exercises in `cpp/` subdirectory)
+Understand how modern C++ features are implemented in LLVM IR by predicting compiler output.
 
 ## How to Use These Exercises
 
@@ -21,82 +29,123 @@ This directory contains progressive exercises designed to teach you LLVM IR fund
 
 ## Exercise Progression
 
-### Exercise 1: Hello World (`01_hello_world.ll`)
-**Topic:** Basic LLVM IR Structure
-- Global string constants
-- External function declarations
-- Basic function structure
-- Function calls and return values
+### Challenge 1: Reverse Engineering (`01_reverse_engineer.ll`)
+**Topic:** Reverse Engineering from Expected Output
+**Difficulty:** ⭐⭐☆☆☆
+- Figure out what LLVM IR produces specific output
+- No hints provided - deduce from CHECK lines
+- Research printf usage and string formatting
+- Understand basic arithmetic and output
 
-**Skills learned:**
-- `@global_var` syntax for globals
-- `declare` for external functions
-- `define` for function definitions
-- `getelementptr` for string access
-- `call` instruction
-- `ret` instruction
+**Skills you'll develop:**
+- Reading and understanding CHECK patterns
+- Researching LLVM IR syntax independently
+- Problem-solving from incomplete information
+- Basic printf and string handling
 
-### Exercise 2: Arithmetic (`02_arithmetic.ll`)
-**Topic:** Variables and Basic Arithmetic
-- Local variable allocation
-- Load and store operations
-- Integer arithmetic operations
+### Challenge 2: Optimization Detective (`02_optimization_detective.ll`)
+**Topic:** Understanding Compiler Optimizations
+**Difficulty:** ⭐⭐⭐☆☆
+- Analyze inefficient LLVM IR code
+- Predict what optimization passes will do
+- Research sroa, early-cse, and instcombine passes
+- Fill in CHECK patterns for optimized output
 
-**Skills learned:**
-- `alloca` for local variables
-- `load` and `store` instructions
-- `add`, `mul`, `sub` arithmetic instructions
-- Variable alignment concepts
+**Skills you'll develop:**
+- Understanding LLVM optimization pipeline
+- Analyzing redundant operations
+- Memory-to-register promotion concepts
+- Predicting compiler transformations
 
-### Exercise 3: Conditionals (`03_conditionals.ll`)
-**Topic:** Conditional Branches and Comparisons
-- Integer comparisons
-- Conditional branching
-- Basic block structure
+### Challenge 3: Control Flow Puzzle (`03_control_flow_puzzle.ll`)
+**Topic:** Complex Branching and Command Line Arguments  
+**Difficulty:** ⭐⭐⭐⭐☆
+- Handle command line arguments in main()
+- Implement multi-way branching logic
+- Number categorization with complex rules
+- Research argc/argv handling in LLVM IR
 
-**Skills learned:**
-- `icmp` instruction and comparison predicates (`sgt`, `slt`, etc.)
-- `br` conditional and unconditional branching
-- Basic block labels and control flow
-- SSA form principles
+**Skills you'll develop:**
+- Advanced control flow with multiple basic blocks
+- Command line argument processing
+- Complex conditional logic
+- Integer comparison and modulo operations
 
-### Exercise 4: Loops (`04_loops.ll`)
-**Topic:** Loops and Phi Nodes
-- Loop construction
-- Phi nodes for SSA form
-- Control flow with multiple basic blocks
+### Challenge 4: Array Operations (`04_array_operations.ll`)
+**Topic:** Dynamic Array Processing
+**Difficulty:** ⭐⭐⭐⭐☆
+- Implement array algorithms with loops
+- Find maximum, sum, and count operations
+- Use phi nodes for loop variables
+- Cannot hardcode results - must compute them
 
-**Skills learned:**
-- `phi` nodes for value merging
-- Loop structure with basic blocks
-- SSA form in practice
-- Complex control flow patterns
-
-### Exercise 5: Functions (`05_functions.ll`)
-**Topic:** Functions and Function Calls
-- Function definitions with parameters
-- Function calls with arguments
-- Recursive functions
-- Return values
-
-**Skills learned:**
-- Function parameter syntax
-- Function calls with arguments
-- Recursive function calls
-- Function return values
-- Multiple function definitions
-
-### Exercise 6: Arrays (`06_arrays.ll`)
-**Topic:** Arrays and Getelementptr
+**Skills you'll develop:**
 - Array allocation and initialization
-- Array indexing with getelementptr
-- Combining arrays with loops
+- Loop-based data processing
+- Multiple accumulator variables
+- Real algorithm implementation
 
-**Skills learned:**
-- Array types `[n x type]`
-- `getelementptr inbounds` for array indexing
-- Dynamic array access with variables
-- Array processing patterns
+### Challenge 5: Fibonacci Challenge (`05_fibonacci_challenge.ll`)
+**Topic:** Recursive vs Iterative Algorithms
+**Difficulty:** ⭐⭐⭐⭐⭐
+- Implement both recursive AND iterative Fibonacci
+- Compare performance and correctness
+- Handle edge cases properly
+- Research function calling overhead
+
+**Skills you'll develop:**
+- Recursive function implementation
+- Loop-based alternatives to recursion
+- Algorithm analysis and comparison
+- Advanced function design
+
+### Challenge 6: Struct Puzzle (`06_struct_puzzle.ll`)
+**Topic:** Advanced Type System and Memory Management
+**Difficulty:** ⭐⭐⭐⭐⭐
+- Define custom struct types
+- Implement heap allocation and pointer manipulation
+- Mathematical operations (distance calculation)
+- Memory management with malloc/free
+
+**Skills you'll develop:**
+- Custom type definitions in LLVM IR
+- Pointer arithmetic and struct field access
+- Memory allocation and deallocation
+- Complex mathematical operations
+
+## C++ Analysis Exercises
+
+These exercises teach you how high-level C++ constructs are implemented in LLVM IR:
+
+### Challenge C++0: Basic Functions ⭐⭐☆☆☆
+- Gentle introduction to C++ → LLVM IR analysis
+- Simple function calls and basic control flow
+- Understanding the prediction process
+
+### Challenge C++1: Template Detective
+- Template instantiation and metaprogramming
+- Compile-time vs runtime computation analysis
+- Template name mangling in LLVM IR
+
+### Challenge C++2: Virtual Function Dispatch ⭐⭐⭐⭐☆
+- Polymorphism and virtual function table implementation
+- Dynamic dispatch vs static calls
+- Vtable structure in LLVM IR
+
+### Challenge C++3: Exception Handling and RAII ⭐⭐⭐⭐⭐
+- C++ exception implementation mechanisms
+- Stack unwinding and cleanup
+- LLVM IR exception handling constructs
+
+### Challenge C++4: Lambda Closures ⭐⭐⭐⭐☆
+- Lambda expression implementation as closures
+- Different capture modes (value, reference, mutable)
+- Closure optimization strategies
+
+### Challenge C++5: Move Semantics and Perfect Forwarding ⭐⭐⭐⭐⭐
+- Modern C++ performance features
+- Move vs copy semantics in LLVM IR
+- Return Value Optimization (RVO) analysis
 
 ## LLVM IR Reference
 
