@@ -26,12 +26,15 @@ target triple = "x86_64-pc-linux-gnu"
 
 define i32 @mystery_function() {
 entry:
-  ; TODO: Write LLVM IR that produces the expected output
-  ; Available variable names you MUST use: %x, %y, %result
-  ; Figure out what operations are needed from the CHECK lines below
-  
-  ; Your code goes here...
-  
+  %x = alloca i32, align 4
+  %y = alloca i32, align 4
+  store i32 6, i32* %x, align 4
+  store i32 7, i32* %y, align 4
+  %x_val = load i32, i32* %x, align 4
+  %y_val = load i32, i32* %y, align 4
+  %result = mul %32 %x_val, %y_val
+  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32 %result)
+   
 }
 
 ; Expected output - figure out what the function should do!

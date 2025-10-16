@@ -18,20 +18,48 @@ config.excludes = ['Inputs', 'CMakeLists.txt', 'README.txt', 'LICENSE.txt']
 # Setup target triple
 config.target_triple = "(unused)"
 
-# Find LLVM tools
-llvm_tools_dir = '/usr/lib/llvm-20/bin'
+# Find LLVM tools - try multiple possible locations and use system PATH fallback
+def find_tool(name):
+    """Find a tool in various possible locations"""
+    # Try versioned paths first (for LLVM 20)
+    possible_paths = [
+        f'/usr/bin/{name}-20',
+        f'/usr/lib/llvm-20/bin/{name}',
+        f'/usr/bin/{name}',
+        name  # Fallback to PATH
+    ]
+    
+    for path in possible_paths:
+        try:
+            # Check if the tool exists and is executable
+            result = subprocess.run([path, '--version'], 
+                                  capture_output=True, 
+                                  text=True, 
+                                  timeout=5)
+            if result.returncode == 0:
+                lit_config.note(f'Found {name} at: {path}')
+                return path
+        except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
+            continue
+    
+    # If not found, return the name anyway (let lit handle the error)
+    lit_config.warning(f'Could not find {name}, using PATH fallback')
+    return name
+
+# Find all required tools
 tools = {
-    'llvm-as': os.path.join(llvm_tools_dir, 'llvm-as'),
-    'lli': os.path.join(llvm_tools_dir, 'lli'),
-    'opt': os.path.join(llvm_tools_dir, 'opt'),
-    'FileCheck': 'FileCheck',  # Should be in system PATH
-    'clang': 'clang',
-    'clang++': 'clang++',
+    'llvm-as': find_tool('llvm-as'),
+    'lli': find_tool('lli'),
+    'opt': find_tool('opt'),
+    'FileCheck': find_tool('FileCheck'),
+    'clang': find_tool('clang'),
+    'clang++': find_tool('clang++'),
 }
 
 # Add tool substitutions
 for name, path in tools.items():
     config.substitutions.append(('%' + name, path))
+    lit_config.note(f'Tool substitution: %{name} -> {path}')
 
 # Add other necessary substitutions  
 # %t should create unique temporary files for each test

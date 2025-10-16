@@ -49,10 +49,25 @@ commands:
             
             # Verify installations
             echo "=== Verifying LLVM Installation ==="
+            echo "PATH: $PATH"
+            echo "Available LLVM tools:"
+            ls -la /usr/bin/*llvm* /usr/bin/*clang* /usr/bin/FileCheck* || true
+            ls -la /usr/lib/llvm-<< parameters.llvm-version >>/bin/ || true
+            
+            echo "Tool versions:"
             llvm-as --version
             clang --version
             FileCheck --version
+            opt --version
+            lli --version
             lit --version
+            
+            echo "Testing basic functionality:"
+            which llvm-as clang FileCheck opt lli
+            echo 'define i32 @main() { ret i32 0 }' > test.ll
+            llvm-as test.ll -o test.bc
+            lli test.bc
+            echo "Basic LLVM functionality verified"
 
   run-tests:
     description: "Run lit tests with proper reporting"
@@ -66,10 +81,28 @@ commands:
           command: mkdir -p << parameters.output-dir >>
       
       - run:
+          name: Debug lit configuration
+          command: |
+            echo "=== Lit Configuration Debug ==="
+            echo "Current directory: $(pwd)"
+            echo "Contents:"
+            ls -la
+            echo "Test directory contents:"
+            find tests/ -name "*.ll" -o -name "*.test" | head -10
+            
+            echo "Running lit discovery:"
+            lit --show-tests tests/ || echo "Lit discovery failed"
+            
+            echo "Running single test with maximum verbosity:"
+            lit -vv tests/debug.test || echo "Single test failed"
+          
+          when: always
+      
+      - run:
           name: Run LLVM lit tests
           command: |
             # Run tests with XML output for CircleCI
-            lit --xunit-xml-output=<< parameters.output-dir >>/results.xml tests/
+            lit -v --xunit-xml-output=<< parameters.output-dir >>/results.xml tests/
           
           # Continue even if some tests fail - we want to see the results
           when: always
