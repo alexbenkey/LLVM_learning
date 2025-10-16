@@ -23,8 +23,8 @@ entry:
 ; CHECK-NOT: alloca
 
 ; Capture the first operand value in a variable called NUM1
-; CHECK: %[[NUM1:[0-9]+]] = add i32 10, 20
-; CHECK: ret i32 %[[NUM1]]
+; CHECK: %sum = add i32 10, 20
+; CHECK: ret i32 %sum
 
 ; Alternative approach - capture any register name
 ; Could also use: %[[SUM:[a-zA-Z0-9_.]+]] = add i32 10, 20

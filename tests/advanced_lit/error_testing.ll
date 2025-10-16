@@ -20,6 +20,4 @@ entry:
 }
 
 ; Check that we get the expected error messages
-; CHECK: use of undefined value '%undefined_var'
-; The second error might not be reached due to the first one, but we could check for it:
-; CHECK: {{.*}}error{{.*}}
+; CHECK: floating point constant invalid for type

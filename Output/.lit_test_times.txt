@@ -21,9 +21,9 @@
 -1.625156e-02 exercises/06_arrays.ll
 8.473635e-03 tests/advanced_lit/platform_specific.test
 3.034902e-02 tests/advanced_lit/multi_prefix.ll
--1.755738e-02 tests/advanced_lit/error_testing.ll
--2.085376e-02 tests/advanced_lit/variable_capture.ll
--1.963210e-02 exercises/01_reverse_engineer.ll
+1.295733e-02 tests/advanced_lit/error_testing.ll
+1.500463e-02 tests/advanced_lit/variable_capture.ll
+3.928423e-02 exercises/01_reverse_engineer.ll
 -4.421091e-02 exercises/02_optimization_detective.ll
 -1.953936e-02 exercises/03_control_flow_puzzle.ll
 -4.713655e-02 exercises/04_array_operations.ll

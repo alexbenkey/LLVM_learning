@@ -24,7 +24,13 @@ target triple = "x86_64-pc-linux-gnu"
 
 ; You may declare external functions here if needed
 
-define i32 @mystery_function() {
+@.str = private unnamed_addr constant [18 x i8] c"The answer is %d\0A\00", align 1
+
+@.str2 = private unnamed_addr constant [27 x i8] c"Calculation: %d * %d = %d\0A\00", align 1
+
+declare i32 @printf(i8*, ...)
+
+define i32 @main() {
 entry:
   %x = alloca i32, align 4
   %y = alloca i32, align 4
@@ -32,9 +38,10 @@ entry:
   store i32 7, i32* %y, align 4
   %x_val = load i32, i32* %x, align 4
   %y_val = load i32, i32* %y, align 4
-  %result = mul %32 %x_val, %y_val
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32 %result)
-   
+  %result = mul i32 %x_val, %y_val
+  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([18 x i8], [18 x i8]* @.str, i32 0, i32 0), i32 %result)
+  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([27 x i8], [27 x i8]* @.str2, i32 0, i32 0), i32 %x_val, i32 %y_val, i32 %result)
+  ret i32 0
 }
 
 ; Expected output - figure out what the function should do!
