@@ -109,24 +109,23 @@ commands:
             lit -vv debug-test/minimal.test 2>&1 || echo "Minimal test failed"
             
             echo "=== Python Regex Test ==="
-            python3 -c "
+            python3 -c '
 import re
-print('Testing regex patterns:')
-patterns = ['%clang', '%clang++', '%llvm-as', '%FileCheck']
+print("Testing regex patterns:")
+patterns = ["%clang", "%clang++", "%llvm-as", "%FileCheck"]
 for p in patterns:
     try:
         escaped = re.escape(p)
         compiled = re.compile(escaped)
-        print(f'{p} -> {escaped} -> OK')
+        print(f"{p} -> {escaped} -> OK")
     except Exception as e:
-        print(f'{p} -> ERROR: {e}')
+        print(f"{p} -> ERROR: {e}")
 
-# Test what might be in the CI environment that's different
-print('\nEnvironment differences:')
+print("\nEnvironment differences:")
 import os
-print(f'Python path: {os.sys.path}')
-print(f'Working dir: {os.getcwd()}')
-            "
+print(f"Python path: {os.sys.path}")
+print(f"Working dir: {os.getcwd()}")
+            '
           when: always
           
       - run:
