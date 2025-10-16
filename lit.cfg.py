@@ -18,8 +18,10 @@ config.excludes = ['Inputs', 'CMakeLists.txt', 'README.txt', 'LICENSE.txt']
 # Setup target triple
 config.target_triple = "(unused)"
 
-# Simple tool discovery and substitution setup
-# Use lit.util.which for clean path resolution
+# Tool discovery and substitution setup
+# Handle regex-sensitive tool names properly
+import re
+
 tools = [
     ('llvm-as', ['llvm-as-20', 'llvm-as']),
     ('lli', ['lli-20', 'lli']),
@@ -29,7 +31,8 @@ tools = [
     ('clang++', ['clang++-20', 'clang++']),
 ]
 
-# Add tool substitutions
+# Build substitutions list with proper regex escaping
+substitutions = []
 for tool_name, candidates in tools:
     tool_path = None
     
@@ -46,8 +49,19 @@ for tool_name, candidates in tools:
         tool_path = candidates[-1]  # Use the unversioned name
         lit_config.warning(f'Using fallback for {tool_name}: {tool_path}')
     
-    # Add the substitution
-    config.substitutions.append((f'%{tool_name}', tool_path))
+    # Create properly escaped substitution pattern
+    # Escape regex metacharacters in the pattern
+    escaped_pattern = re.escape(f'%{tool_name}')
+    substitutions.append((escaped_pattern, tool_path))
+    lit_config.note(f'Substitution: {escaped_pattern} -> {tool_path}')
+
+# Sort substitutions by length of original pattern (longest first)
+# This prevents %clang from matching %clang++ incorrectly
+substitutions.sort(key=lambda x: len(x[0]), reverse=True)
+
+# Add all substitutions to config
+for pattern, replacement in substitutions:
+    config.substitutions.append((pattern, replacement))
 
 # Add other necessary substitutions  
 # %t should create unique temporary files for each test

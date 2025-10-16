@@ -79,25 +79,97 @@ commands:
       - run:
           name: Create output directory
           command: mkdir -p << parameters.output-dir >>
-      
       - run:
-          name: Debug lit configuration
+          name: Debug CircleCI environment and lit configuration
           command: |
-            echo "=== Lit Configuration Debug ==="
+            echo "=== Environment Debug ==="
+            echo "Python version: $(python3 --version)"
+            echo "Lit version: $(lit --version)"
             echo "Current directory: $(pwd)"
-            echo "Contents:"
-            ls -la
-            echo "Test directory contents:"
-            find tests/ -name "*.ll" -o -name "*.test" | head -10
+            echo "PATH: $PATH"
             
-            echo "Running lit discovery:"
-            lit --show-tests tests/ || echo "Lit discovery failed"
+            echo "=== Tool Discovery Debug ==="
+            echo "Available tools:"
+            which llvm-as-20 llvm-as lli-20 lli opt-20 opt FileCheck-20 FileCheck clang-20 clang clang++-20 clang++ 2>/dev/null || true
             
-            echo "Running single test with maximum verbosity:"
-            lit -vv tests/debug.test || echo "Single test failed"
-          
+            echo "=== Lit Configuration Debug ==="
+            echo "Contents of lit.cfg.py:"
+            cat lit.cfg.py
+            
+            echo "=== Testing Lit Substitution Processing ==="
+            # Create a minimal test to isolate the regex issue
+            mkdir -p debug-test
+            echo '; RUN: echo "test"' > debug-test/minimal.test
+            echo '; CHECK: test' >> debug-test/minimal.test
+            
+            echo "Minimal test contents:"
+            cat debug-test/minimal.test
+            
+            echo "Running minimal test with maximum verbosity:"
+            lit -vv debug-test/minimal.test 2>&1 || echo "Minimal test failed"
+            
+            echo "=== Python Regex Test ==="
+            python3 -c "
+import re
+print('Testing regex patterns:')
+patterns = ['%clang', '%clang++', '%llvm-as', '%FileCheck']
+for p in patterns:
+    try:
+        escaped = re.escape(p)
+        compiled = re.compile(escaped)
+        print(f'{p} -> {escaped} -> OK')
+    except Exception as e:
+        print(f'{p} -> ERROR: {e}')
+
+# Test what might be in the CI environment that's different
+print('\nEnvironment differences:')
+import os
+print(f'Python path: {os.sys.path}')
+print(f'Working dir: {os.getcwd()}')
+            "
           when: always
-      
+          
+      - run:
+          name: Test with minimal lit config to isolate issue
+          command: |
+            echo "=== Testing with Minimal Configuration ==="
+            
+            # Create a completely minimal lit.cfg.py
+            cp lit.cfg.py lit.cfg.py.backup
+            cat > lit.cfg.py << 'EOF'
+# Minimal lit configuration for debugging
+import os
+import lit.formats
+
+config.name = 'Debug-Test'
+config.test_format = lit.formats.ShTest()
+config.suffixes = ['.test']
+config.test_source_root = os.path.dirname(__file__)
+config.test_exec_root = os.path.join(config.test_source_root, 'Output')
+
+# No substitutions - test raw commands
+os.makedirs(config.test_exec_root, exist_ok=True)
+EOF
+            
+            echo "Minimal config contents:"
+            cat lit.cfg.py
+            
+            echo "Testing minimal config:"
+            lit -vv debug-test/minimal.test 2>&1 || echo "Still failing with minimal config"
+            
+            # Try with absolute paths instead of substitutions
+            cat > debug-test/absolute.test << 'EOF'
+; RUN: /bin/echo "absolute path test"
+; CHECK: absolute path test
+EOF
+            
+            echo "Testing with absolute paths:"
+            lit -vv debug-test/absolute.test 2>&1 || echo "Absolute path test failed"
+            
+            # Restore original config
+            mv lit.cfg.py.backup lit.cfg.py
+          when: always
+
       - run:
           name: Run LLVM lit tests
           command: |
