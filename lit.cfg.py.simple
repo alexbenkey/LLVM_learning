@@ -1,0 +1,66 @@
+# -*- coding: utf-8 -*-
+# Simplified lit configuration to avoid regex issues
+
+import os
+import lit.formats
+import lit.util
+
+# Basic configuration
+config.name = 'LLVM-Lit-Exploration'
+config.test_format = lit.formats.ShTest()
+config.suffixes = ['.ll', '.c', '.cpp', '.test', '.txt']
+config.test_source_root = os.path.dirname(__file__)
+config.test_exec_root = os.path.join(config.test_source_root, 'Output')
+config.excludes = ['Inputs', 'CMakeLists.txt', 'README.txt', 'LICENSE.txt']
+
+# Setup target triple
+config.target_triple = "(unused)"
+
+# Create output directory
+os.makedirs(config.test_exec_root, exist_ok=True)
+
+# Simple tool discovery without substitutions initially
+# Use environment variables instead of substitutions to avoid regex issues
+tools = {
+    'llvm-as': 'llvm-as',
+    'lli': 'lli', 
+    'opt': 'opt',
+    'FileCheck': 'FileCheck',
+    'clang': 'clang',
+    'clangxx': 'clang++'  # Use different name to avoid ++ in regex
+}
+
+# Try to find versioned tools
+for tool_name, tool_cmd in tools.items():
+    versioned = f'{tool_cmd}-20'
+    found = lit.util.which(versioned)
+    if found:
+        tools[tool_name] = versioned
+        lit_config.note(f'Using {tool_name}: {versioned}')
+    else:
+        found = lit.util.which(tool_cmd)
+        if found:
+            lit_config.note(f'Using {tool_name}: {tool_cmd}')
+        else:
+            lit_config.warning(f'Tool not found: {tool_name}')
+
+# Use simple string substitutions instead of regex
+config.substitutions.append(('%llvm-as', tools['llvm-as']))
+config.substitutions.append(('%lli', tools['lli']))
+config.substitutions.append(('%opt', tools['opt']))
+config.substitutions.append(('%FileCheck', tools['FileCheck']))
+config.substitutions.append(('%clang', tools['clang']))
+config.substitutions.append(('%clang++', tools['clangxx']))  # Map %clang++ to clangxx
+
+# Add directory substitutions
+config.substitutions.append(('%T', config.test_exec_root))
+
+# Add platform features
+import platform
+if platform.system() == 'Linux':
+    config.available_features.add('system-linux')
+if platform.machine() in ['x86_64', 'AMD64']:
+    config.available_features.add('x86_64')
+
+lit_config.note(f'test_source_root: {config.test_source_root}')
+lit_config.note(f'test_exec_root: {config.test_exec_root}')

@@ -80,93 +80,40 @@ commands:
           name: Create output directory
           command: mkdir -p << parameters.output-dir >>
       - run:
-          name: Debug CircleCI environment and lit configuration
+          name: Debug environment and test simple case
           command: |
-            echo "=== Environment Debug ==="
             echo "Python version: $(python3 --version)"
             echo "Lit version: $(lit --version)"
-            echo "Current directory: $(pwd)"
             echo "PATH: $PATH"
-            
-            echo "=== Tool Discovery Debug ==="
             echo "Available tools:"
-            which llvm-as-20 llvm-as lli-20 lli opt-20 opt FileCheck-20 FileCheck clang-20 clang clang++-20 clang++ 2>/dev/null || true
+            which llvm-as lli opt FileCheck clang || true
             
-            echo "=== Lit Configuration Debug ==="
-            echo "Contents of lit.cfg.py:"
-            cat lit.cfg.py
-            
-            echo "=== Testing Lit Substitution Processing ==="
-            # Create a minimal test to isolate the regex issue
+            echo "Test simple case:"
             mkdir -p debug-test
-            echo '; RUN: echo "test"' > debug-test/minimal.test
-            echo '; CHECK: test' >> debug-test/minimal.test
+            echo '; RUN: /bin/echo "test"' > debug-test/simple.test
+            echo '; CHECK: test' >> debug-test/simple.test
             
-            echo "Minimal test contents:"
-            cat debug-test/minimal.test
-            
-            echo "Running minimal test with maximum verbosity:"
-            lit -vv debug-test/minimal.test 2>&1 || echo "Minimal test failed"
-            
-            echo "=== Python Regex Test ==="
-            python3 -c '
-import re
-print("Testing regex patterns:")
-patterns = ["%clang", "%clang++", "%llvm-as", "%FileCheck"]
-for p in patterns:
-    try:
-        escaped = re.escape(p)
-        compiled = re.compile(escaped)
-        print(f"{p} -> {escaped} -> OK")
-    except Exception as e:
-        print(f"{p} -> ERROR: {e}")
-
-print("\nEnvironment differences:")
-import os
-print(f"Python path: {os.sys.path}")
-print(f"Working dir: {os.getcwd()}")
-            '
+            echo "Running simple test:"
+            lit -vv debug-test/simple.test || echo "Simple test failed"
           when: always
-          
+      
       - run:
-          name: Test with minimal lit config to isolate issue
+          name: Test with fallback configuration if needed
           command: |
-            echo "=== Testing with Minimal Configuration ==="
-            
-            # Create a completely minimal lit.cfg.py
-            cp lit.cfg.py lit.cfg.py.backup
-            cat > lit.cfg.py << 'EOF'
-# Minimal lit configuration for debugging
-import os
-import lit.formats
-
-config.name = 'Debug-Test'
-config.test_format = lit.formats.ShTest()
-config.suffixes = ['.test']
-config.test_source_root = os.path.dirname(__file__)
-config.test_exec_root = os.path.join(config.test_source_root, 'Output')
-
-# No substitutions - test raw commands
-os.makedirs(config.test_exec_root, exist_ok=True)
-EOF
-            
-            echo "Minimal config contents:"
-            cat lit.cfg.py
-            
-            echo "Testing minimal config:"
-            lit -vv debug-test/minimal.test 2>&1 || echo "Still failing with minimal config"
-            
-            # Try with absolute paths instead of substitutions
-            cat > debug-test/absolute.test << 'EOF'
-; RUN: /bin/echo "absolute path test"
-; CHECK: absolute path test
-EOF
-            
-            echo "Testing with absolute paths:"
-            lit -vv debug-test/absolute.test 2>&1 || echo "Absolute path test failed"
-            
-            # Restore original config
-            mv lit.cfg.py.backup lit.cfg.py
+            echo "Testing with alternative configuration"
+            if [ -f lit.cfg.py.simple ]; then
+              echo "Using simple configuration as fallback"
+              cp lit.cfg.py lit.cfg.py.original
+              cp lit.cfg.py.simple lit.cfg.py
+              
+              echo "Testing with simple config:"
+              lit -vv tests/debug.test || echo "Even simple config failed"
+              
+              # Restore original
+              mv lit.cfg.py.original lit.cfg.py
+            else
+              echo "No fallback config available"
+            fi
           when: always
 
       - run:
