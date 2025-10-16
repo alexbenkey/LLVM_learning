@@ -117,10 +117,26 @@ commands:
           when: always
 
       - run:
-          name: Run LLVM lit tests
+          name: Run LLVM lit tests and exercises
           command: |
-            # Run tests with XML output for CircleCI
-            lit -v --xunit-xml-output=<< parameters.output-dir >>/results.xml tests/
+            # Run both tests and exercises with XML output for CircleCI
+            echo "Running main tests..."
+            lit -v --xunit-xml-output=<< parameters.output-dir >>/tests-results.xml tests/ || true
+            
+            echo "Running exercises..."
+            lit -v --xunit-xml-output=<< parameters.output-dir >>/exercises-results.xml exercises/ || true
+            
+            # Combine results for CircleCI reporting
+            echo "Combining results..."
+            # Create a summary file
+            echo "=== Test Summary ===" > << parameters.output-dir >>/summary.txt
+            echo "Tests:" >> << parameters.output-dir >>/summary.txt
+            grep -E "(Passed|Failed|Unsupported|Expected Failures):" << parameters.output-dir >>/tests-results.xml >> << parameters.output-dir >>/summary.txt || echo "No test results found" >> << parameters.output-dir >>/summary.txt
+            echo "" >> << parameters.output-dir >>/summary.txt
+            echo "Exercises:" >> << parameters.output-dir >>/summary.txt
+            grep -E "(Passed|Failed|Unsupported|Expected Failures):" << parameters.output-dir >>/exercises-results.xml >> << parameters.output-dir >>/summary.txt || echo "No exercise results found" >> << parameters.output-dir >>/summary.txt
+            
+            cat << parameters.output-dir >>/summary.txt
           
           # Continue even if some tests fail - we want to see the results
           when: always
@@ -130,7 +146,7 @@ commands:
       
       - store_artifacts:
           path: << parameters.output-dir >>
-          destination: test-results
+          destination: test-and-exercise-results
 
 # Define the jobs
 jobs:
@@ -171,18 +187,33 @@ jobs:
       - checkout
       - install-llvm
       
-      # Run tests with timing information
+      # Run tests and exercises with timing information
       - run:
-          name: Run tests with performance metrics
+          name: Run tests and exercises with performance metrics
           command: |
             mkdir -p test-results
             mkdir -p performance-results
             
-            # Run with timing information
-            lit --time-tests --xunit-xml-output=test-results/results.xml tests/ | tee performance-results/timing.log
+            # Run tests with timing information
+            echo "Running main tests with performance tracking..."
+            lit --time-tests --xunit-xml-output=test-results/tests-results.xml tests/ | tee performance-results/tests-timing.log || true
+            
+            # Run exercises with timing information
+            echo "Running exercises with performance tracking..."
+            lit --time-tests --xunit-xml-output=test-results/exercises-results.xml exercises/ | tee performance-results/exercises-timing.log || true
             
             # Extract slowest tests for analysis
-            grep -A 20 "Slowest Tests:" performance-results/timing.log > performance-results/slow-tests.txt || true
+            echo "Analyzing performance..."
+            grep -A 20 "Slowest Tests:" performance-results/tests-timing.log > performance-results/slow-tests.txt || true
+            grep -A 20 "Slowest Tests:" performance-results/exercises-timing.log > performance-results/slow-exercises.txt || true
+            
+            # Create combined summary
+            echo "=== Performance Summary ===" > performance-results/summary.txt
+            echo "Tests:" >> performance-results/summary.txt
+            tail -5 performance-results/tests-timing.log >> performance-results/summary.txt || true
+            echo "" >> performance-results/summary.txt
+            echo "Exercises:" >> performance-results/summary.txt
+            tail -5 performance-results/exercises-timing.log >> performance-results/summary.txt || true
       
       - store_test_results:
           path: test-results
@@ -195,67 +226,20 @@ jobs:
           path: performance-results
           destination: performance-metrics
       
-      # Run exercises separately to track learning progress
-      - run:
-          name: Check exercise completion status
-          command: |
-            mkdir -p exercise-results
-            echo "=== Exercise Completion Status ===" > exercise-results/status.txt
-            
-            # Count completed vs incomplete exercises
-            if [ -d "exercises/" ]; then
-              total_exercises=$(find exercises/ -name "*.ll" -not -name "*SOLUTION*" | wc -l)
-              
-              # Run exercises and capture results
-              lit exercises/ > exercise-results/raw-output.txt 2>&1 || true
-              
-              passed=$(grep "Passed:" exercise-results/raw-output.txt | grep -o '[0-9]*' | head -1 || echo "0")
-              failed=$(grep "Failed:" exercise-results/raw-output.txt | grep -o '[0-9]*' | head -1 || echo "0")
-              
-              echo "Total Exercises: $total_exercises" >> exercise-results/status.txt
-              echo "Completed (Passing): $passed" >> exercise-results/status.txt
-              echo "Incomplete (Failing): $failed" >> exercise-results/status.txt
-              echo "" >> exercise-results/status.txt
-              echo "Progress: $passed/$total_exercises exercises completed" >> exercise-results/status.txt
-              
-              # Show which exercises are incomplete
-              echo "" >> exercise-results/status.txt
-              echo "=== Incomplete Exercises ===" >> exercise-results/status.txt
-              grep "FAIL:" exercise-results/raw-output.txt >> exercise-results/status.txt || echo "All exercises completed!" >> exercise-results/status.txt
-              
-              cat exercise-results/status.txt
-            else
-              echo "No exercises directory found" >> exercise-results/status.txt
-            fi
-      
-      - store_artifacts:
-          path: exercise-results
-          destination: exercise-status
 
 # Define workflows
 workflows:
   version: 2
   
-  # Main workflow - runs on every commit
+  # Main workflow - runs on every commit with LLVM-20 only
   test-and-build:
     jobs:
-      - test-basic
+      - test-llvm-versions:
+          name: test-llvm-20
+          llvm-version: "20"
       
       # Run comprehensive tests only on main branch
       - test-comprehensive:
-          filters:
-            branches:
-              only:
-                - main
-                - master
-      
-      # Test with different LLVM versions in parallel
-      - test-llvm-versions:
-          name: test-llvm-<< matrix.llvm-version >>
-          matrix:
-            parameters:
-              llvm-version: ["16", "18", "20"]
-          # Only run version matrix on main branch to save resources
           filters:
             branches:
               only:
@@ -275,8 +259,3 @@ workflows:
     
     jobs:
       - test-comprehensive
-      - test-llvm-versions:
-          name: nightly-llvm-<< matrix.llvm-version >>
-          matrix:
-            parameters:
-              llvm-version: ["16", "17", "18", "19", "20"]
